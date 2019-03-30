@@ -12,11 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
+// job is a joe.Module that runs a single cron job on a given interval.
 type job struct {
 	cron     *cron.Cron
 	schedule cron.Schedule
 	fun      func(joe.EventEmitter) cron.FuncJob
-	err      error
+	err      error // to defer error handling until joe.Module is loaded
 
 	// some meta information about the scheduled job
 	typ, sched string
@@ -31,7 +32,6 @@ func ScheduleEvent(schedule string, events ...interface{}) joe.Module {
 
 	s, err := cron.Parse(schedule)
 	return &job{
-		cron:     cron.New(),
 		schedule: s,
 		err:      errors.Wrap(err, "invalid cron schedule"),
 		typ:      eventsString(events),
@@ -49,7 +49,6 @@ func ScheduleEvent(schedule string, events ...interface{}) joe.Module {
 func ScheduleFunc(schedule string, fun func()) joe.Module {
 	s, err := cron.Parse(schedule)
 	return &job{
-		cron:     cron.New(),
 		schedule: s,
 		err:      errors.Wrap(err, "invalid cron schedule"),
 		typ:      runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name(),
@@ -66,7 +65,6 @@ func ScheduleEventEvery(schedule time.Duration, events ...interface{}) joe.Modul
 	}
 
 	return &job{
-		cron:     cron.New(),
 		schedule: cron.Every(schedule),
 		typ:      eventsString(events),
 		sched:    fmt.Sprintf("@every %s", schedule),
@@ -82,7 +80,6 @@ func ScheduleEventEvery(schedule time.Duration, events ...interface{}) joe.Modul
 
 func ScheduleFuncEvery(schedule time.Duration, fun func()) joe.Module {
 	return &job{
-		cron:     cron.New(),
 		schedule: cron.Every(schedule),
 		typ:      runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name(),
 		sched:    fmt.Sprintf("@every %s", schedule),
@@ -110,7 +107,6 @@ func (m *job) Apply(conf *joe.Config) error {
 	}
 
 	logger := conf.Logger("cron")
-	m.cron.ErrorLog, _ = zap.NewStdLogAt(logger, zap.ErrorLevel)
 
 	brain := conf.EventEmitter()
 	job := m.fun(brain)
@@ -121,6 +117,8 @@ func (m *job) Apply(conf *joe.Config) error {
 		zap.Time("next_run", m.schedule.Next(time.Now())),
 	)
 
+	m.cron = cron.New()
+	m.cron.ErrorLog, _ = zap.NewStdLogAt(logger, zap.ErrorLevel)
 	m.cron.Schedule(m.schedule, job)
 	m.cron.Start()
 
