@@ -72,7 +72,7 @@ func main() {
 
 ## Built With
 
-* [nlopes/slack](https://github.com/robfig/cron) - A cron library for go
+* [robfig/cron](https://github.com/robfig/cron) - A cron library for go
 * [zap](https://github.com/uber-go/zap) - Blazing fast, structured, leveled logging in Go
 * [pkg/errors](https://github.com/pkg/errors) - Simple error handling primitives
 * [testify](https://github.com/stretchr/testify) - A simple unit test library
