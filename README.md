@@ -3,6 +3,7 @@
 <p align="center">
 	<a href="https://github.com/go-joe/cron/releases"><img src="https://img.shields.io/github/tag/go-joe/cron.svg?label=version&color=brightgreen"></a>
 	<a href="https://circleci.com/gh/go-joe/cron/tree/master"><img src="https://circleci.com/gh/go-joe/cron/tree/master.svg?style=shield"></a>
+	<a href="https://codecov.io/gh/go-joe/cron"><img src="https://codecov.io/gh/go-joe/cron/branch/master/graph/badge.svg"/></a>
 	<a href="https://godoc.org/github.com/go-joe/cron"><img src="https://img.shields.io/badge/godoc-reference-blue.svg?color=blue"></a>
 	<a href="https://github.com/go-joe/cron/blob/master/LICENSE"><img src="https://img.shields.io/badge/license-BSD--3--Clause-blue.svg"></a>
 </p>
