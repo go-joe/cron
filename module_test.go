@@ -96,8 +96,6 @@ func TestModule_ScheduleEventEvery_CustomEvent(t *testing.T) {
 	m := cron.ScheduleEventEvery(time.Second, evt) // sub second durations are not yet supported
 
 	eventReceived := make(chan interface{})
-	// TODO: why do we force the event to be a struct?
-	// TODO: any registration errors are hidden by the test bot because they are only returned if the handler is registered before the bot is started
 	b.RegisterHandler(func(evt CustomEvent) {
 		eventReceived <- evt
 	})
@@ -215,4 +213,14 @@ func TestModule_InvalidSchedule(t *testing.T) {
 
 	conf := joe.NewConfig(logger, b.Brain, nil)
 	require.EqualError(t, m.Apply(&conf), "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+}
+
+func TestModule_ExampleSchedule(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	b := joetest.NewBrain(t)
+	m := cron.ScheduleEvent("0 0 * * *")
+
+	conf := joe.NewConfig(logger, b.Brain, nil)
+	require.NoError(t, m.Apply(&conf))
+	_ = m.(io.Closer).Close()
 }

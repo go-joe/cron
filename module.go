@@ -23,8 +23,19 @@ type job struct {
 	typ, sched string
 }
 
+// Event is the event that the ScheduleEvent(…) type functions emit if no custom
+// event was passed as argument. It can be useful to implement simple jobs that
+// do not require any context but just a schedule that triggers them at an interval.
 type Event struct{}
 
+// ScheduleEvent creates a joe.Module that emits one or many events on a given
+// cron schedule (e.g. "0 0 * * *"). If the passed schedule is not a valid cron
+// schedule as accepted by https://godoc.org/github.com/robfig/cron the error
+// will be returned when the bot is started.
+//
+// You can execute this function with only a schedule but no events. In this
+// case the job will emit an instance of the cron.Event type that is defined in
+// this package. Otherwise all passed events are emitted on the schedule.
 func ScheduleEvent(schedule string, events ...interface{}) joe.Module {
 	if len(events) == 0 {
 		events = []interface{}{Event{}}
@@ -46,6 +57,10 @@ func ScheduleEvent(schedule string, events ...interface{}) joe.Module {
 	}
 }
 
+// ScheduleFunc creates a joe.Module that runs the given function on a given
+// cron schedule (e.g. "0 0 * * *"). If the passed schedule is not a valid cron
+// schedule as accepted by https://godoc.org/github.com/robfig/cron the error
+// will be returned when the bot is started.
 func ScheduleFunc(schedule string, fun func()) joe.Module {
 	s, err := cron.Parse(schedule)
 	return &job{
@@ -59,6 +74,13 @@ func ScheduleFunc(schedule string, fun func()) joe.Module {
 	}
 }
 
+// ScheduleEventEvery creates a joe.Module that emits one or many events on a
+// given interval (e.g. every hour). The minimum duration is one second and any
+// smaller durations will be rounded up to that.
+//
+// You can execute this function with only a schedule but no events. In this
+// case the job will emit an instance of the cron.Event type that is defined in
+// this package. Otherwise all passed events are emitted on the schedule.
 func ScheduleEventEvery(schedule time.Duration, events ...interface{}) joe.Module {
 	if len(events) == 0 {
 		events = []interface{}{Event{}}
@@ -78,6 +100,9 @@ func ScheduleEventEvery(schedule time.Duration, events ...interface{}) joe.Modul
 	}
 }
 
+// ScheduleFuncEvery creates a joe.Module that runs the given function on a
+// given interval (e.g. every hour). The minimum duration is one second and any
+// smaller durations will be rounded up to that.
 func ScheduleFuncEvery(schedule time.Duration, fun func()) joe.Module {
 	return &job{
 		schedule: cron.Every(schedule),
@@ -101,6 +126,9 @@ func eventsString(events []interface{}) string {
 	return typ
 }
 
+// Apply implements joe.Module by starting a new cron job that may use the event
+// emitter from the configuration (if it actually emits events). Jobs that only
+// run functions will only require a logger.
 func (m *job) Apply(conf *joe.Config) error {
 	if m.err != nil {
 		return m.err
@@ -125,6 +153,7 @@ func (m *job) Apply(conf *joe.Config) error {
 	return nil
 }
 
+// Close stops the cron job.
 func (m *job) Close() error {
 	m.cron.Stop()
 	return nil
