@@ -13,18 +13,18 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-func TestModule_ScheduleEvent(t *testing.T) {
+func TestScheduleEvent(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEvent("* * * * * ?")
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("* * * * * ?")
 
 	eventReceived := make(chan bool)
-	b.RegisterHandler(func(cron.Event) {
+	brain.RegisterHandler(func(cron.Event) {
 		eventReceived <- true
 	})
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, brain)
+	require.NoError(t, err)
 
 	select {
 	case <-eventReceived:
@@ -33,24 +33,24 @@ func TestModule_ScheduleEvent(t *testing.T) {
 		t.Error("Did not see event")
 	}
 
-	_ = m.(io.Closer).Close()
-	b.Finish()
+	require.NoError(t, job.Close())
+	brain.Finish()
 }
 
-func TestModule_ScheduleCustomEvent(t *testing.T) {
+func TestScheduleCustomEvent(t *testing.T) {
 	type CustomEvent struct{ N int }
 
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEvent("* * * * * ?", CustomEvent{N: 42})
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("* * * * * ?", CustomEvent{N: 42})
 
 	eventReceived := make(chan interface{})
-	b.RegisterHandler(func(evt CustomEvent) {
+	brain.RegisterHandler(func(evt CustomEvent) {
 		eventReceived <- evt
 	})
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, brain)
+	require.NoError(t, err)
 
 	select {
 	case got := <-eventReceived:
@@ -59,22 +59,22 @@ func TestModule_ScheduleCustomEvent(t *testing.T) {
 		t.Error("Did not see event")
 	}
 
-	_ = m.(io.Closer).Close()
-	b.Finish()
+	require.NoError(t, job.Close())
+	brain.Finish()
 }
 
-func TestModule_ScheduleEventEvery(t *testing.T) {
+func TestScheduleEventEvery(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEventEvery(time.Second) // sub second durations are not yet supported
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEventEvery(time.Second) // sub second durations are not yet supported
 
 	eventReceived := make(chan bool)
-	b.RegisterHandler(func(cron.Event) {
+	brain.RegisterHandler(func(cron.Event) {
 		eventReceived <- true
 	})
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, brain)
+	require.NoError(t, err)
 
 	select {
 	case <-eventReceived:
@@ -83,25 +83,25 @@ func TestModule_ScheduleEventEvery(t *testing.T) {
 		t.Error("Did not see event")
 	}
 
-	_ = m.(io.Closer).Close()
-	b.Finish()
+	require.NoError(t, job.Close())
+	brain.Finish()
 }
 
-func TestModule_ScheduleEventEvery_CustomEvent(t *testing.T) {
+func TestScheduleEventEvery_CustomEvent(t *testing.T) {
 	type CustomEvent struct{ N int }
 
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
+	brain := joetest.NewBrain(t)
 	evt := CustomEvent{N: 1}
-	m := cron.ScheduleEventEvery(time.Second, evt) // sub second durations are not yet supported
+	job := cron.ScheduleEventEvery(time.Second, evt) // sub second durations are not yet supported
 
 	eventReceived := make(chan interface{})
-	b.RegisterHandler(func(evt CustomEvent) {
+	brain.RegisterHandler(func(evt CustomEvent) {
 		eventReceived <- evt
 	})
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, brain)
+	require.NoError(t, err)
 
 	select {
 	case got := <-eventReceived:
@@ -110,15 +110,17 @@ func TestModule_ScheduleEventEvery_CustomEvent(t *testing.T) {
 		t.Error("Did not see event")
 	}
 
-	_ = m.(io.Closer).Close()
+	require.NoError(t, job.Close())
 
 	expected := []interface{}{
 		CustomEvent{N: 2},
 		CustomEvent{N: 3},
 		CustomEvent{N: 4},
 	}
-	m = cron.ScheduleEventEvery(time.Second, expected...)
-	require.NoError(t, m.Apply(&conf))
+
+	job = cron.ScheduleEventEvery(time.Second, expected...)
+	err = job.Start(logger, brain)
+	require.NoError(t, err)
 
 	ok := make(chan bool)
 	go func() {
@@ -136,22 +138,22 @@ func TestModule_ScheduleEventEvery_CustomEvent(t *testing.T) {
 		t.Error("Did not see the three event in time")
 	}
 
-	_ = m.(io.Closer).Close()
-	b.Finish()
+	require.NoError(t, job.Close())
+	brain.Finish()
 }
 
-func TestModule_DoNotStartEarly(t *testing.T) {
+func TestJob_DoNotStartEarly(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEventEvery(time.Hour) // next planned execution is well in the future
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEventEvery(time.Hour) // next planned execution is well in the future
 
 	eventReceived := make(chan bool)
-	b.RegisterHandler(func(cron.Event) {
+	brain.RegisterHandler(func(cron.Event) {
 		eventReceived <- true
 	})
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, brain)
+	require.NoError(t, err)
 
 	select {
 	case <-eventReceived:
@@ -160,20 +162,20 @@ func TestModule_DoNotStartEarly(t *testing.T) {
 		// ok cool, lets move on
 	}
 
-	_ = m.(io.Closer).Close()
-	b.Finish()
+	require.NoError(t, job.Close())
+	brain.Finish()
 }
 
-func TestModule_ScheduleFuncEvery(t *testing.T) {
+func TestScheduleFuncEvery(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	done := make(chan bool, 1)
-	m := cron.ScheduleFuncEvery(time.Second, func() {
+	job := cron.ScheduleFuncEvery(time.Second, func() {
 		logger.Info("Executing function")
 		done <- true
 	})
 
-	conf := joe.NewConfig(logger, nil, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, nil)
+	require.NoError(t, err)
 
 	select {
 	case <-done:
@@ -182,19 +184,19 @@ func TestModule_ScheduleFuncEvery(t *testing.T) {
 		t.Error("Function was not executed in time")
 	}
 
-	_ = m.(io.Closer).Close()
+	require.NoError(t, job.Close())
 }
 
-func TestModule_ScheduleFunc(t *testing.T) {
+func TestScheduleFunc(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	done := make(chan bool, 1)
-	m := cron.ScheduleFunc("* * * * * ?", func() {
+	job := cron.ScheduleFunc("* * * * * ?", func() {
 		logger.Info("Executing function")
 		done <- true
 	})
 
-	conf := joe.NewConfig(logger, nil, nil)
-	require.NoError(t, m.Apply(&conf))
+	err := job.Start(logger, nil)
+	require.NoError(t, err)
 
 	select {
 	case <-done:
@@ -203,24 +205,75 @@ func TestModule_ScheduleFunc(t *testing.T) {
 		t.Error("Function was not executed in time")
 	}
 
-	_ = m.(io.Closer).Close()
+	require.NoError(t, job.Close())
 }
 
-func TestModule_InvalidSchedule(t *testing.T) {
+func TestJob_InvalidSchedule(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEvent("foobar")
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("foobar")
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.EqualError(t, m.Apply(&conf), "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+	err := job.Start(logger, brain)
+	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
 }
 
-func TestModule_ExampleSchedule(t *testing.T) {
+func TestExampleSchedule(t *testing.T) {
 	logger := zaptest.NewLogger(t)
-	b := joetest.NewBrain(t)
-	m := cron.ScheduleEvent("0 0 * * *")
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("0 0 * * *")
 
-	conf := joe.NewConfig(logger, b.Brain, nil)
-	require.NoError(t, m.Apply(&conf))
-	_ = m.(io.Closer).Close()
+	err := job.Start(logger, brain.Brain)
+	require.NoError(t, err)
+
+	require.NoError(t, job.Close())
+	brain.Finish()
+}
+
+func TestJob_Start(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("* * * * * ?")
+
+	eventReceived := make(chan bool)
+	brain.RegisterHandler(func(cron.Event) {
+		eventReceived <- true
+	})
+
+	err := job.Start(logger, brain.Brain)
+	require.NoError(t, err)
+
+	select {
+	case <-eventReceived:
+		// ok cool, we can stop the cron job now
+	case <-time.After(2 * time.Second):
+		t.Error("Did not see event")
+	}
+
+	require.NoError(t, job.Close())
+	brain.Finish()
+}
+
+func TestJob_Module(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	brain := joetest.NewBrain(t)
+	var job joe.Module = cron.ScheduleEvent("* * * * * ?")
+
+	eventReceived := make(chan bool)
+	brain.RegisterHandler(func(cron.Event) {
+		eventReceived <- true
+	})
+
+	conf := joe.NewConfig(logger, brain.Brain, nil)
+	err := job.Apply(&conf)
+	require.NoError(t, err)
+
+	select {
+	case <-eventReceived:
+		// ok cool, we can stop the cron job now
+	case <-time.After(2 * time.Second):
+		t.Error("Did not see event")
+	}
+
+	require.NoError(t, job.(io.Closer).Close())
+	brain.Finish()
 }
