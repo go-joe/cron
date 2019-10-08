@@ -1,3 +1,5 @@
+// Package cron implements cron jobs for the Joe bot library.
+// https://github.com/go-joe/joe
 package cron
 
 import (
