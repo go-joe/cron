@@ -172,6 +172,10 @@ func (j *Job) Start(logger *zap.Logger, events joe.EventEmitter) error {
 
 // Close stops the cron job.
 func (j *Job) Close() error {
-	j.cron.Stop()
+	// The job may be nil if the used cron expression was invalid.
+	if j.cron != nil {
+		j.cron.Stop()
+	}
+
 	return nil
 }
