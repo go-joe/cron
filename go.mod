@@ -1,6 +1,6 @@
 module github.com/go-joe/cron
 
-go 1.13
+go 1.14
 
 require (
 	github.com/go-joe/joe v0.6.0
