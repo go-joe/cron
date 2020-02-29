@@ -277,3 +277,31 @@ func TestJob_Module(t *testing.T) {
 	require.NoError(t, job.(io.Closer).Close())
 	brain.Finish()
 }
+
+func TestScheduleEvent_Error(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleEvent("foobar")
+
+	err := job.Start(logger, brain)
+	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+
+	assert.NoError(t, job.Close())
+	brain.Finish()
+	assert.Empty(t, brain.RecordedEvents())
+}
+
+func TestScheduleFunc_Error(t *testing.T) {
+	logger := zaptest.NewLogger(t)
+	brain := joetest.NewBrain(t)
+	job := cron.ScheduleFunc("foobar", func() {
+		t.Error("Function should never run")
+	})
+
+	err := job.Start(logger, brain)
+	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+
+	assert.NoError(t, job.Close())
+	brain.Finish()
+	assert.Empty(t, brain.RecordedEvents())
+}
