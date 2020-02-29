@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/go-joe/joe"
-	"github.com/pkg/errors"
 	"github.com/robfig/cron"
 	"go.uber.org/zap"
 )
@@ -44,9 +43,13 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 	}
 
 	s, err := cron.Parse(schedule)
+	if err != nil {
+		err = fmt.Errorf("invalid cron schedule: %w", err)
+	}
+
 	return &Job{
 		schedule: s,
-		err:      errors.Wrap(err, "invalid cron schedule"),
+		err:      err,
 		typ:      eventsString(events),
 		sched:    schedule,
 		fun: func(brain joe.EventEmitter) cron.FuncJob {
@@ -65,9 +68,13 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 // will be returned when the bot is started.
 func ScheduleFunc(schedule string, fun func()) *Job {
 	s, err := cron.Parse(schedule)
+	if err != nil {
+		err = fmt.Errorf("invalid cron schedule: %w", err)
+	}
+
 	return &Job{
 		schedule: s,
-		err:      errors.Wrap(err, "invalid cron schedule"),
+		err:      err,
 		typ:      runtime.FuncForPC(reflect.ValueOf(fun).Pointer()).Name(),
 		sched:    schedule,
 		fun: func(joe.EventEmitter) cron.FuncJob {
