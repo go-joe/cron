@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Nothing so far
+- Updated the used cron library to version 3
 
 ## [v1.0.0] - 2020-02-28
 - Use error wrapping of standard library instead of github.com/pkg/errors

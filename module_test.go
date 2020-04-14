@@ -214,7 +214,7 @@ func TestJob_InvalidSchedule(t *testing.T) {
 	job := cron.ScheduleEvent("foobar")
 
 	err := job.Start(logger, brain)
-	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+	require.EqualError(t, err, "invalid cron schedule: expected 5 to 6 fields, found 1: [foobar]")
 }
 
 func TestExampleSchedule(t *testing.T) {
@@ -284,7 +284,7 @@ func TestScheduleEvent_Error(t *testing.T) {
 	job := cron.ScheduleEvent("foobar")
 
 	err := job.Start(logger, brain)
-	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+	require.EqualError(t, err, "invalid cron schedule: expected 5 to 6 fields, found 1: [foobar]")
 
 	assert.NoError(t, job.Close())
 	brain.Finish()
@@ -299,7 +299,7 @@ func TestScheduleFunc_Error(t *testing.T) {
 	})
 
 	err := job.Start(logger, brain)
-	require.EqualError(t, err, "invalid cron schedule: Expected 5 to 6 fields, found 1: foobar")
+	require.EqualError(t, err, "invalid cron schedule: expected 5 to 6 fields, found 1: [foobar]")
 
 	assert.NoError(t, job.Close())
 	brain.Finish()

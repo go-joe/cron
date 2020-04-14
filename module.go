@@ -9,8 +9,13 @@ import (
 	"time"
 
 	"github.com/go-joe/joe"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 	"go.uber.org/zap"
+)
+
+// defaultParser accepts standard cron schedules with optional seconds.
+var defaultParser = cron.NewParser(
+	cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
 )
 
 // A Job is a joe.Module that runs a single cron job on a given interval.
@@ -42,7 +47,7 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 		events = []interface{}{Event{}}
 	}
 
-	s, err := cron.Parse(schedule)
+	s, err := defaultParser.Parse(schedule)
 	if err != nil {
 		err = fmt.Errorf("invalid cron schedule: %w", err)
 	}
@@ -63,11 +68,13 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 }
 
 // ScheduleFunc creates a joe.Module that runs the given function on a given
-// cron schedule (e.g. "0 0 * * *"). If the passed schedule is not a valid cron
+// cron schedule (e.g. "0 0 * * *"). Optionally, the cron schedule can also
+// contain seconds, i.e. "30 0 0 * * *".
+// If the passed schedule is not a valid cron
 // schedule as accepted by https://godoc.org/github.com/robfig/cron the error
 // will be returned when the bot is started.
 func ScheduleFunc(schedule string, fun func()) *Job {
-	s, err := cron.Parse(schedule)
+	s, err := defaultParser.Parse(schedule)
 	if err != nil {
 		err = fmt.Errorf("invalid cron schedule: %w", err)
 	}
@@ -162,8 +169,13 @@ func (j *Job) Start(logger *zap.Logger, events joe.EventEmitter) error {
 	)
 
 	job := j.fun(events)
-	j.cron = cron.New()
-	j.cron.ErrorLog, _ = zap.NewStdLogAt(logger, zap.ErrorLevel)
+	cronLogger, _ := zap.NewStdLogAt(logger, zap.ErrorLevel)
+	j.cron = cron.New(
+		cron.WithParser(defaultParser),
+		cron.WithLogger(
+			cron.PrintfLogger(cronLogger),
+		),
+	)
 	j.cron.Schedule(j.schedule, job)
 	j.cron.Start()
 
