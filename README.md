@@ -45,6 +45,9 @@ func main() {
 		// emit your own custom event every day at 09:00
 		cron.ScheduleEvent("0 9 * * *", MyEvent{}), 
 		
+		// emit your own custom event every day at 09:00:30
+		cron.ScheduleEvent("30 0 9 * * *", MyEvent{}),
+
 		// cron expressions can be hard to read and might be overkill
 		cron.ScheduleEventEvery(time.Hour, MyEvent{}), 
 		
@@ -81,6 +84,7 @@ see the [tags on this repository][tags].
 ## Authors
 
 - **Friedrich Große** - *Initial work* - [fgrosse](https://github.com/fgrosse)
+- **Julius Bachnick** - *Update cron library to v3* - [juliusbachnick](https://github.com/juliusbachnick)
 
 See also the list of [contributors][contributors] who participated in this project.
 
