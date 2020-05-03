@@ -84,6 +84,7 @@ see the [tags on this repository][tags].
 ## Authors
 
 - **Friedrich Große** - *Initial work* - [fgrosse](https://github.com/fgrosse)
+- **Julius Bachnick** - *Update cron library to v3* - [juliusbachnick](https://github.com/juliusbachnick)
 
 See also the list of [contributors][contributors] who participated in this project.
 
