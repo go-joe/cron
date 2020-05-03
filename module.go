@@ -13,8 +13,9 @@ import (
 	"go.uber.org/zap"
 )
 
-// defaultParser accepts standard cron schedules with optional seconds.
-var defaultParser = cron.NewParser(
+// Parser is the default cron.Parser which is configured to accept standard cron
+// schedules with optional seconds.
+var Parser = cron.NewParser(
 	cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor,
 )
 
@@ -36,7 +37,7 @@ type Event struct{}
 
 // ScheduleEvent creates a joe.Module that emits one or many events on a given
 // cron schedule (e.g. "0 0 * * *"). If the passed schedule is not a valid cron
-// schedule as accepted by https://godoc.org/github.com/robfig/cron the error
+// schedule as accepted by the package level Parser, the corresponding error
 // will be returned when the bot is started.
 //
 // You can execute this function with only a schedule but no events. In this
@@ -47,7 +48,7 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 		events = []interface{}{Event{}}
 	}
 
-	s, err := defaultParser.Parse(schedule)
+	s, err := Parser.Parse(schedule)
 	if err != nil {
 		err = fmt.Errorf("invalid cron schedule: %w", err)
 	}
@@ -70,11 +71,12 @@ func ScheduleEvent(schedule string, events ...interface{}) *Job {
 // ScheduleFunc creates a joe.Module that runs the given function on a given
 // cron schedule (e.g. "0 0 * * *"). Optionally, the cron schedule can also
 // contain seconds, i.e. "30 0 0 * * *".
-// If the passed schedule is not a valid cron
-// schedule as accepted by https://godoc.org/github.com/robfig/cron the error
-// will be returned when the bot is started.
+//
+// If the passed schedule is not a valid cron schedule as accepted by the
+// package level Parser, the corresponding error will be returned when the bot
+// is started.
 func ScheduleFunc(schedule string, fun func()) *Job {
-	s, err := defaultParser.Parse(schedule)
+	s, err := Parser.Parse(schedule)
 	if err != nil {
 		err = fmt.Errorf("invalid cron schedule: %w", err)
 	}
@@ -162,6 +164,9 @@ func (j *Job) Start(logger *zap.Logger, events joe.EventEmitter) error {
 		return j.err
 	}
 
+	errLogger, _ := zap.NewStdLogAt(logger, zap.ErrorLevel) // returned error can be ignored because it can never happen with zap.ErrorLevel
+	cronLogger := cron.PrintfLogger(errLogger)
+
 	logger.Info("Registering new cron job",
 		zap.String("typ", j.typ),
 		zap.String("schedule", j.sched),
@@ -169,13 +174,7 @@ func (j *Job) Start(logger *zap.Logger, events joe.EventEmitter) error {
 	)
 
 	job := j.fun(events)
-	cronLogger, _ := zap.NewStdLogAt(logger, zap.ErrorLevel)
-	j.cron = cron.New(
-		cron.WithParser(defaultParser),
-		cron.WithLogger(
-			cron.PrintfLogger(cronLogger),
-		),
-	)
+	j.cron = cron.New(cron.WithLogger(cronLogger))
 	j.cron.Schedule(j.schedule, job)
 	j.cron.Start()
 

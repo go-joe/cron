@@ -41,6 +41,6 @@ service:
 issues:
   exclude-use-default: false
   exclude-rules:
-    - text: "should have a package comment, unless it's in another file for this package"
+    - text: "`Parser` is a global variable"
       linters:
-        - golint
+        - gochecknoglobals
